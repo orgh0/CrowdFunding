@@ -10,3 +10,19 @@ The following Repository contains code and tests for crowdfunding Dapp implement
 - Tanu Rathi
 - Sarat Adusumilli
 
+# Instllation
+
+## Setting up Environment:
+    ```npm install -g truffle```
+    ```npm install -g ethereumjs-testrpc```
+
+## Running the Contract
+    ```testrpc``` (in new terminal tab)
+    ```truffle compile```
+    ```truffle migrate```
+
+## Running the front end which is in React.Js
+    ```cd appui```
+    ```npm start```
+    
+    
