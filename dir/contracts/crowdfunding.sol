@@ -1,20 +1,29 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.4;
 
 contract CrowdFunding
 {
-    mapping (bytes32 => uint8) public count;
-     
-    bytes32[] public TestList;
-
-    function CrowdFunding(bytes32[] Elements) public {
-        TestList = Elements;
+    mapping (uint256 => address) public items;
+    uint item_num ; // number of items in the CrowdFunding website
+    address public owner;
+    
+    constructor () public
+    {
+        owner = msg.sender;
+        item_num = 0;
     }
-
-    function totalCountFor(bytes32 element) view public returns (uint8) {
-        return count[element];
+    
+    function registeritem(string info, uint amount, uint time) payable
+    {
+        Item i = new Item(info, amount, time, msg.sender);
+        items[item_num] = i;
+        item_num = item_num + 1;
+        return i;
     }
-
-    function CountForItems(bytes32 element) public {
-        count[element] += 1;
+    
+    function donate(address chosen_item) payable returns (int status)
+    {
+        require(msg.value > 0);
+        Item chosen = Item(chosen_item);
+        chosen.pay(msg.sender);
     }
 }
