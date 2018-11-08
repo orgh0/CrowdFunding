@@ -25,4 +25,8 @@ The following Repository contains code and tests for crowdfunding Dapp implement
     ```cd appui```
     ```npm start```
     
-    
+
+## Idea of the Platform
+
+- There is a contract which is deployed initially and serves as the Escrow
+- Each Item has it's own contract which stores the money and on reaching target sends it to the owner of the item
