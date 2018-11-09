@@ -1,6 +1,5 @@
 pragma solidity ^0.4.4;
 
-
 contract Item {
     
     uint256 goal;
@@ -19,7 +18,7 @@ contract Item {
         address addr;
     }
     
-    constructor (string description, uint256 goal_amt, uint256 time, address owner) // should be called by the crowd funding platform
+    constructor (string description, uint256 goal_amt, uint256 time, address owner) public // should be called by the crowd funding platform
     {
         require(goal_amt > 0);
         require(block.number < time);
@@ -33,7 +32,7 @@ contract Item {
         product_owner = owner;
     }
     
-    function make_transaction() payable returns (bool status)
+    function make_transaction() payable public returns (bool status)
     {
         uint  amt_val = amount_recieved;
         amount_recieved = 0;
@@ -46,7 +45,7 @@ contract Item {
         return true;
     }
     
-    function refund() payable returns(bool status)
+    function refund() payable external returns(bool status)
     {
         require(block.number > deadline);
         require(amount_recieved < goal);
@@ -61,26 +60,38 @@ contract Item {
         return true;
     }
     
-    function pay(address donor) payable returns (uint status)
+    function pay(address donor) payable external returns (bool status)
     {
-        require(msg.value > 0);
-        require(msg.sender == CrowdFunding_platform);
-        require(block.number < deadline);
+        require(msg.value > 0); // Donation shouldn't be zero'
+        require(msg.sender == CrowdFunding_platform); // only the platform can make transactions
+        require(block.number < deadline); // the deadline musn't have been crossed
         
-        uint val = donator_mapper[donor];
-        donator d = donators[num_contributions];
-        d.donation = msg.value;
-        d.addr = donor;
-        donator_mapper[donor] += msg.value;
-        amount_recieved += msg.value;
-        num_contributions++;
-        if (val == 0) num_contributions++;
-        if(amount_recieved >= goal)make_transaction();
+        if (amount_recieved >= goal)
+        {
+            if (!donor.send(msg.value))
+            {
+                revert();
+            }
+            make_transaction();
+            return false;
+        }
+        
+        uint val = donator_mapper[donor]; // amount contributed by donor till now
+        donator storage d = donators[num_contributions]; // making a new donator
+        d.donation = msg.value; //seting donation value
+        d.addr = donor; // setting donator's address'
+        donator_mapper[donor] += msg.value; // increasing this donators donation count
+        amount_recieved += msg.value; //increasing the total amount recieved by this item
+        num_contributions++; // updating the number of contrubutions made
+        if (val == 0) num_contributions++; // if the previous contribution was zero the 
+        if(amount_recieved >= goal)make_transaction(); // if the goal is reached after this transaction then make the transaction
+        return true;
     }
 }
 
 contract CrowdFunding
 {
+    
     mapping (uint256 => address) public items;
     uint item_num ; // number of items in the CrowdFunding website
     address public owner;
@@ -91,18 +102,32 @@ contract CrowdFunding
         item_num = 0;
     }
     
-    function registeritem(string info, uint amount, uint time) payable returns (Item)
+    function num() public returns (uint)
     {
-        Item i = new Item(info, amount, time, msg.sender);
+        return block.number;
+    }
+    function registeritem(string info, uint256 amount, uint256 time) payable returns (Item item_addr)
+    {
+        if (amount <= 0)
+        {
+            throw;
+        }
+        if (block.number >= time)
+        {
+            
+            throw;
+        }
+        Item i = new Item (info, amount, time, msg.sender);
         items[item_num] = i;
         item_num = item_num + 1;
         return i;
     }
     
-    function donate(address chosen_item) payable returns (int status)
+    function donate(address chosen_item) public payable returns (bool status)
     {
         require(msg.value > 0);
         Item chosen = Item(chosen_item);
-        chosen.pay(msg.sender);
+        chosen.pay.value(msg.value)(msg.sender);
+        return true;
     }
 }
