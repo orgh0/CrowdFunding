@@ -10,6 +10,8 @@ contract Item {
     uint num_contributions;
     address CrowdFunding_platform;
     mapping (uint => donator) public donators;
+    mapping (address => uint) public donator_mapper;
+    address product_owner;
     
     struct donator
     {
@@ -28,6 +30,35 @@ contract Item {
         CrowdFunding_platform = msg.sender;
         information = description;
         amount_recieved = 0;
+        product_owner = owner;
+    }
+    
+    function make_transaction() payable returns (bool status)
+    {
+        uint  amt_val = amount_recieved;
+        amount_recieved = 0;
+        if (product_owner.send(amt_val)) return true;
+        else
+        {
+            amount_recieved = amt_val;
+            return false;
+        }
+        return true;
+    }
+    
+    function refund() payable returns(bool status)
+    {
+        require(block.number > deadline);
+        require(amount_recieved < goal);
+        uint amt = donator_mapper[msg.sender];
+        donator_mapper[msg.sender] = 0;
+        if (msg.sender.send(amt)) return true;
+        else
+        {
+            donator_mapper[msg.sender] = amt;
+            return false;
+        }
+        return true;
     }
     
     function pay(address donor) payable returns (uint status)
@@ -35,10 +66,16 @@ contract Item {
         require(msg.value > 0);
         require(msg.sender == CrowdFunding_platform);
         require(block.number < deadline);
+        
+        uint val = donator_mapper[donor];
         donator d = donators[num_contributions];
         d.donation = msg.value;
         d.addr = donor;
-        
+        donator_mapper[donor] += msg.value;
+        amount_recieved += msg.value;
+        num_contributions++;
+        if (val == 0) num_contributions++;
+        if(amount_recieved >= goal)make_transaction();
     }
 }
 
