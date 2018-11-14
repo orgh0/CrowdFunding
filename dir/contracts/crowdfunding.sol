@@ -21,10 +21,10 @@ contract Item {
     constructor (string description, uint256 goal_amt, uint256 time, address owner) public // should be called by the crowd funding platform
     {
         require(goal_amt > 0);
-        require(block.number < time);
+        // require(block.number < time);
         require(owner != 0);
         goal = goal_amt;
-        deadline = time;
+        deadline = block.number + time;
         num_contributions = 0;
         CrowdFunding_platform = msg.sender;
         information = description;
@@ -89,6 +89,7 @@ contract Item {
     }
 }
 
+
 contract CrowdFunding
 {
     
@@ -102,19 +103,10 @@ contract CrowdFunding
         item_num = 0;
     }
     
-    function num() public returns (uint)
-    {
-        return block.number;
-    }
     function registeritem(string info, uint256 amount, uint256 time) payable returns (Item item_addr)
     {
         if (amount <= 0)
         {
-            throw;
-        }
-        if (block.number >= time)
-        {
-            
             throw;
         }
         Item i = new Item (info, amount, time, msg.sender);
