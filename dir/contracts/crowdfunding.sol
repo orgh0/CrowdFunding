@@ -1,7 +1,10 @@
 pragma solidity ^0.4.4;
 
+
 contract Item {
     
+    event failure(string report);
+
     uint256 goal;
     uint256 deadline;
     string information;
@@ -20,9 +23,18 @@ contract Item {
     
     constructor (string description, uint256 goal_amt, uint256 time, address owner) public // should be called by the crowd funding platform
     {
-        require(goal_amt > 0);
+        // require(goal_amt > 0);
         // require(block.number < time);
-        require(owner != 0);
+        if (goal_amt <= 0)
+        {
+            failure("goal amount recieved must be vaild");
+            throw;
+        }
+        if (owner == 0)
+        {
+            failure("Project must have a vaild owner");
+            throw;
+        }
         goal = goal_amt;
         deadline = block.number + time;
         num_contributions = 0;
@@ -30,6 +42,11 @@ contract Item {
         information = description;
         amount_recieved = 0;
         product_owner = owner;
+    }
+    
+    function get_item() returns(string, uint256, uint256, address, uint256, uint)
+    {
+        return (information, goal, deadline, product_owner, amount_recieved, num_contributions);
     }
     
     function make_transaction() payable public returns (bool status)
@@ -62,14 +79,30 @@ contract Item {
     
     function pay(address donor) payable external returns (bool status)
     {
-        require(msg.value > 0); // Donation shouldn't be zero'
-        require(msg.sender == CrowdFunding_platform); // only the platform can make transactions
-        require(block.number < deadline); // the deadline musn't have been crossed
+        // require(msg.value > 0); // Donation shouldn't be zero'
+        if (msg.value <= 0)
+        {
+            failure("Value of the contrubution must be greater than zero");
+            throw;
+        }
+        // require(msg.sender == CrowdFunding_platform); // only the platform can make transactions
+        if (msg.sender != CrowdFunding_platform)
+        {
+            failure("contrubution can only be made from the platform");
+            throw;
+        }
+        // require(block.number < deadline); // the deadline musn't have been crossed
+        if(block.number > deadline)
+        {
+            failure("Deadline for accepting contributions has passed");
+            throw;
+        }
         
         if (amount_recieved >= goal)
         {
             if (!donor.send(msg.value))
             {
+                failure("Project Deadline passed, problem returning contribution");
                 revert();
             }
             make_transaction();
@@ -77,14 +110,23 @@ contract Item {
         }
         
         uint val = donator_mapper[donor]; // amount contributed by donor till now
+        
         donator storage d = donators[num_contributions]; // making a new donator
+        
         d.donation = msg.value; //seting donation value
+        
         d.addr = donor; // setting donator's address'
+        
         donator_mapper[donor] += msg.value; // increasing this donators donation count
+        
         amount_recieved += msg.value; //increasing the total amount recieved by this item
+        
         num_contributions++; // updating the number of contrubutions made
+        
         if (val == 0) num_contributions++; // if the previous contribution was zero the 
+        
         if(amount_recieved >= goal)make_transaction(); // if the goal is reached after this transaction then make the transaction
+        
         return true;
     }
 }
@@ -92,6 +134,7 @@ contract Item {
 
 contract CrowdFunding
 {
+    event failure(string report);
     
     mapping (uint256 => address) public items;
     uint item_num ; // number of items in the CrowdFunding website
@@ -107,6 +150,7 @@ contract CrowdFunding
     {
         if (amount <= 0)
         {
+            failure("Target amount has to be a valid number");
             throw;
         }
         Item i = new Item (info, amount, time, msg.sender);
@@ -115,11 +159,29 @@ contract CrowdFunding
         return i;
     }
     
-    function donate(address chosen_item) public payable returns (bool status)
+    function donate(uint256 index) public payable returns (bool status)
     {
+        address chosen_item = items[index];
         require(msg.value > 0);
         Item chosen = Item(chosen_item);
-        chosen.pay.value(msg.value)(msg.sender);
+        if(chosen.pay.value(msg.value)(msg.sender))
+        {
+            return true;
+        }
+        else
+        {
+            failure("Contribution Not Sent Succesfully");
+            return false;
+        }
         return true;
     }
+    
+    // function show_items() public
+    // {
+    //     for(uint i = 0; i < item_num; i++)
+    //     {
+    //         address temp = items[i];
+    //         Item temp_item = Item(temp);
+    //     }
+    // }
 }
